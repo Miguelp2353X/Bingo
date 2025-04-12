@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>BINGO FUNDACIÓN IQ</title>
+<link rel="stylesheet" href="S.js">
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f5f5f5;
+      margin: 0;
+      padding: 20px;
+      display: flex;
+      flex-direction: row;
+      justify-content: center;
+      gap: 20px;
+    }
+    h1 {
+      color: #2c3e50;
+      text-align: center;
+    }
+    .main-content {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .bingo-container {
+      background-color: white;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+      max-width: 1000px;
+      overflow-x: auto;
+    }
+    .bingo-card {
+      display: grid;
+      grid-template-columns: repeat(16, 1fr);
+      gap: 2px;
+    }
+    .cell {
+      min-width: 50px;
+      height: 50px;
+      border: 1px solid #ddd;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      background-color: white;
+      cursor: pointer;
+    }
+    .cell:hover {
+      background-color: #f0f0f0;
+    }
+    .marked {
+      background-color: #ffcc00;
+    }
+    .header {
+      background-color: #3498db;
+      color: white;
+      font-weight: bold;
+    }
+    .clear-btn {
+      background-color: #e74c3c;
+      color: white;
+    }
+    .controls {
+      margin-top: 20px;
+      display: flex;
+      gap: 10px;
+    }
+    button {
+      padding: 10px 20px;
+      font-size: 16px;
+      background-color: #3498db;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    .marked-numbers {
+      margin-top: 20px;
+      padding: 15px;
+      background-color: #e8f4fc;
+      border-radius: 5px;
+      width: 100%;
+      max-width: 1000px;
+    }
+    .pattern-section {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: 300px;
+    }
+    .pattern-card {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 5px;
+      margin-top: 20px;
+      width: 250px;
+      height: 250px;
+      background-color: white;
+      padding: 10px;
+      border-radius: 10px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+    .pattern-cell {
+      width: 100%;
+      height: 100%;
+      border: 1px solid #ddd;
+      transition: background-color 0.3s;
+    }
+    .pattern-selector {
+      padding: 10px;
+      font-size: 16px;
+      border-radius: 5px;
+      border: 1px solid #ddd;
+      width: 100%;
+    }
+    .pattern-title {
+      margin-top: 10px;
+      font-weight: bold;
+      color: #2c3e50;
+    }
+  </style>
+</head>
+<body>
+  <div class="main-content">
+    <h1>BINGO FUNDACIÓN IQ</h1>
+    <div class="bingo-container">
+      <div class="bingo-card" id="bingoCard"></div>
+    </div>
+    <div class="controls">
+      <button onclick="markRandom()">Número Aleatorio</button>
+      <button onclick="resetCard()">Limpiar Todo</button>
+    </div>
+    <div class="marked-numbers">
+      <h3>Números Marcados: <span id="markedCount">0</span></h3>
+      <p id="markedNumbersList">Ningún número marcado aún.</p>
+    </div>
+  </div>
+
+  <div class="pattern-section">
+    <h3>Patrón de Ganador</h3>
+    <select id="patternSelector" class="pattern-selector" onchange="updatePattern()">
+      <option value="T">Letra T</option>
+      <option value="X">Letra X</option>
+      <option value="estrella">Estrella</option>
+      <option value="corazon">Corazón</option>
+      <option value="cuadrado">Cuadrado</option>
+      <option value="bingo">BINGO (completo)</option>
+      <option value="diagonal">Diagonal</option>
+      <option value="esquinas">M</option>
+    </select>
+    <div class="pattern-title" id="patternName">Letra T</div>
+    <div class="pattern-card" id="patternCard"></div>
+  </div>
+
+  <script>
+    
+    const bingoCard = document.getElementById('bingoCard');
+    const patternCard = document.getElementById('patternCard');
+    let markedNumbers = [];
+    let currentPattern = 'T';
+
+    const patterns = {
+      'T': [[1,1,1,1,1],[0,0,1,0,0],[0,0,1,0,0],[0,0,1,0,0],[0,0,1,0,0]],
+      'X': [[1,0,0,0,1],[0,1,0,1,0],[0,0,1,0,0],[0,1,0,1,0],[1,0,0,0,1]],
+      'estrella': [[1,0,1,0,1],[0,1,1,1,0],[1,1,1,1,1],[0,1,1,1,0],[1,0,1,0,1]],
+      'corazon': [[0,1,0,1,0],[1,0,1,0,1],[1,0,0,0,1],[0,1,0,1,0],[0,0,1,0,0]],
+      'cuadrado': [[1,1,1,1,1],[1,0,0,0,1],[1,0,0,0,1],[1,0,0,0,1],[1,1,1,1,1]],
+      'bingo': [[1,1,1,1,1],[1,1,1,1,1],[1,1,1,1,1],[1,1,1,1,1],[1,1,1,1,1]],
+      'diagonal': [[1,0,0,0,0],[0,1,0,0,0],[0,0,1,0,0],[0,0,0,1,0],[0,0,0,0,1]],
+      'esquinas': [[1,0,0,0,1],[1,1,0,1,1],[1,0,1,0,1],[1,0,0,0,1],[1,0,0,0,1]]
+    };
+
+    const patternNames = {
+      'T': 'Letra T',
+      'X': 'Letra X',
+      'estrella': 'Estrella',
+      'corazon': 'Corazón',
+      'cuadrado': 'Cuadrado',
+      'bingo': 'BINGO Completo',
+      'diagonal': 'Diagonal Principal',
+      'esquinas': 'M'
+    };
+
+    function createBingoCard() {
+      bingoCard.innerHTML = '';
+      const letters = ['B', 'I', 'N', 'C', 'O'];
+      const ranges = [
+        {start: 1, end: 15},
+        {start: 16, end: 30},
+        {start: 31, end: 45},
+        {start: 46, end: 60},
+        {start: 61, end: 75}
+      ];
+
+      letters.forEach((letter, rowIndex) => {
+        const rowLabel = document.createElement('div');
+        rowLabel.className = 'cell header';
+        rowLabel.textContent = letter;
+        bingoCard.appendChild(rowLabel);
+        for (let i = 0; i < 15; i++) {
+          const num = ranges[rowIndex].start + i;
+          const cell = document.createElement('div');
+          cell.className = 'cell';
+          cell.textContent = num;
+          cell.dataset.number = num;
+          cell.onclick = function () { toggleMark(this); };
+          bingoCard.appendChild(cell);
+        }
+      });
+    }
+
+    function createPatternCard() {
+      patternCard.innerHTML = '';
+      const pattern = patterns[currentPattern];
+      const color = getMainColor();
+      for (let row = 0; row < 5; row++) {
+        for (let col = 0; col < 5; col++) {
+          const cell = document.createElement('div');
+          cell.className = 'pattern-cell';
+          if (pattern[row][col] === 1) {
+            cell.style.backgroundColor = color;
+            cell.style.border = '1px solid ' + darkenColor(color, 20);
+          } else {
+            cell.style.backgroundColor = '#f5f5f5';
+            cell.style.border = '1px solid #ddd';
+          }
+          patternCard.appendChild(cell);
+        }
+      }
+    }
+
+    function getMainColor() {
+      return '#3498db';
+    }
+
+    function darkenColor(color, percent) {
+      const num = parseInt(color.replace("#", ""), 16),
+          amt = Math.round(2.55 * percent),
+          R = (num >> 16) - amt,
+          G = (num >> 8 & 0x00FF) - amt,
+          B = (num & 0x0000FF) - amt;
+      return "#" + (
+        0x1000000 +
+        (R < 0 ? 0 : R) * 0x10000 +
+        (G < 0 ? 0 : G) * 0x100 +
+        (B < 0 ? 0 : B)
+      ).toString(16).slice(1);
+    }
+
+    function toggleMark(cell) {
+      const number = parseInt(cell.dataset.number);
+      const index = markedNumbers.indexOf(number);
+      if (index === -1) {
+        markedNumbers.push(number);
+        cell.classList.add('marked');
+      } else {
+        markedNumbers.splice(index, 1);
+        cell.classList.remove('marked');
+      }
+      updateMarkedNumbersList();
+    }
+
+    function updateMarkedNumbersList() {
+      const list = document.getElementById('markedNumbersList');
+      const count = document.getElementById('markedCount');
+      count.textContent = markedNumbers.length;
+      list.textContent = markedNumbers.length ? markedNumbers.sort((a,b) => a - b).join(', ') : "Ningún número marcado aún.";
+    }
+
+    function markRandom() {
+      const allCells = document.querySelectorAll('.cell:not(.header):not(.clear-btn)');
+      const unmarked = Array.from(allCells).filter(c => !c.classList.contains('marked'));
+      if (unmarked.length === 0) {
+        alert("¡Todos los números han sido marcados!");
+        return;
+      }
+      const randomCell = unmarked[Math.floor(Math.random() * unmarked.length)];
+      toggleMark(randomCell);
+      randomCell.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    function resetCard() {
+      markedNumbers = [];
+      document.querySelectorAll('.cell.marked').forEach(cell => cell.classList.remove('marked'));
+      updateMarkedNumbersList();
+    }
+
+    function updatePattern() {
+      currentPattern = document.getElementById('patternSelector').value;
+      document.getElementById('patternName').textContent = patternNames[currentPattern];
+      createPatternCard();
+    }
+
+    window.onload = () => {
+      createBingoCard();
+      createPatternCard();
+    }
+
+    
+  </script>
+</body>
+</html>
